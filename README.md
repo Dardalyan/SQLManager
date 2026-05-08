@@ -1,5 +1,4 @@
 # 🗄️ SQLManager
-
 This is a lightweight, modular, and practical SQLAlchemy-based package designed to support multiple database workflows under a single manager layer.
 
 Instead of forcing only one style, `SQLManager` is built to handle real-world mixed scenarios such as:
@@ -8,17 +7,17 @@ Instead of forcing only one style, `SQLManager` is built to handle real-world mi
 - database-first runtime reflection
 - explicit database-first model classes with IDE support
 - code-first schema management with Alembic migrations
-- reusable model-level CRUD helpers without adding a separate repository layer
+- clean separation between model definitions and repository/persistence logic
 
 Rather than acting like a heavy framework, this package follows a more engineering-oriented approach.
 It stays close to `SQLAlchemy`, but organizes the common connection, ORM, metadata, and migration concerns into a reusable structure.
 
 The result is a package that is:
 
-⚡ Lightweight  
-🔧 Modular  
-🚀 Practical  
-♻️ Easily extensible
+- Lightweight
+- Modular
+- Practical
+- Easily extensible
 
 At its core:
 
@@ -29,19 +28,20 @@ At its core:
 
 ## 📚 Table of Contents
 
-- [📂 Project Structure](#-project-structure)
-- [🛠️ Setup](#️-setup)
-- [🧠 What This Package Solves](#-what-this-package-solves)
-- [🏗️ Core Idea](#️-core-idea)
-- [🧭 Choosing the Right Approach](#-choosing-the-right-approach)
-- [🧩 Supported Database Engines](#-supported-database-engines)
-- [🚀 Quick Start](#-quick-start)
-- [📦 Module: `manager`](#-module-manager)
-- [📦 Module: `service`](#-module-service)
-- [📦 Module: `model`](#-module-model)
-- [🧪 Usage Scenarios](#-usage-scenarios)
-- [🧩 End-to-End Examples](#-end-to-end-examples)
-- [⚠️ Notes](#️-notes)
+- [📂 Project Structure](#project-structure)
+- [🛠️ Setup](#setup)
+- [🧠 What This Package Solves](#what-this-package-solves)
+- [🏗️ Core Idea](#core-idea)
+- [🧭 Choosing the Right Approach](#choosing-the-right-approach)
+- [🧩 Supported Database Engines](#supported-database-engines)
+- [🚀 Quick Start](#quick-start)
+- [📦 Module: `manager`](#module-manager)
+- [📦 Module: `service`](#module-service)
+- [📦 Module: `model`](#module-model)
+- [📦 Module: `repository`](#module-repository)
+- [🧪 Usage Scenarios](#usage-scenarios)
+- [🧩 End-to-End Examples](#end-to-end-examples)
+- [⚠️ Notes](#notes)
 
 ---
 
@@ -49,30 +49,34 @@ At its core:
 
 ```text
 .
-├── README.md
-├── requirements.txt
-├── manager/
-│   ├── __init__.py
-│   ├── BaseManager.py        # Core SQL connection and raw query execution
-│   └── SQLManager.py         # Higher-level manager with Session, Meta, HintBase and StaticBase
-├── model/
-│   ├── __init__.py
-│   └── BaseModel.py          # BaseModel, StaticBaseModel and HintBaseModel
-├── service/
-│   ├── __init__.py
-│   ├── ORMRegistrator.py     # External ORM class registry
-│   └── Migration.py          # Alembic-based migration helper
-└── FileManager/
-    ├── __init__.py
-    └── FileManager.py        # Local helper used by the migration service
+|-- README.md
+|-- requirements.txt
+|-- manager/
+|   |-- __init__.py
+|   |-- BaseManager.py        # Core SQL connection and raw query execution
+|   `-- SQLManager.py         # Higher-level manager with Session, Meta, HintBase and StaticBase
+|-- model/
+|   |-- __init__.py
+|   `-- BaseModel.py          # BaseModel, StaticBaseModel and HintBaseModel
+|-- repository/
+|   |-- __init__.py
+|   `-- BaseRepository.py     # Generic repository with query and persistence helpers
+|-- service/
+|   |-- __init__.py
+|   |-- ORMRegistrator.py     # External ORM class registry
+|   `-- Migration.py          # Alembic-based migration helper
+`-- file_manager/
+    |-- __init__.py
+    `-- FileManager.py        # Local helper used by the migration service
 ```
 
 ### 🔹 Folder Summary
 
 - `manager/` contains the connection layer and ORM-aware manager classes
 - `model/` contains reusable model base classes
+- `repository/` contains reusable generic repository helpers
 - `service/` contains the ORM registration and migration helpers
-- `FileManager/` contains a local helper currently used by the migration service
+- `file_manager/` contains a local file utility used by the migration service
 
 ---
 
@@ -114,9 +118,9 @@ Sometimes:
 
 - the database already exists and you only want to reflect it
 - the database already exists but you still want explicit model classes for IDE support
-- you want model classes to expose CRUD-like behavior
 - you want model changes to become schema migrations
 - you only want a clean raw SQL manager without ORM models
+- you want model definitions separated from persistence/repository operations
 
 `SQLManager` was written to support all of those cases under one package.
 
@@ -124,7 +128,6 @@ Without this kind of structure, projects often end up with:
 
 - scattered connection setup
 - repeated session boilerplate
-- repeated CRUD helper code
 - mixed raw SQL and ORM usage without a clear boundary
 - migration logic disconnected from model logic
 
@@ -183,8 +186,6 @@ This is for database-first projects where:
 - `HintBase` models are registered through `ORMRegistrator`
 - `HintBase` is not the migration source of the package
 
-If you also want built-in CRUD-like methods such as `User.all()` and `User.add(...)`, then inherit from `HintBaseModel` instead of plain `HintBase`.
-
 ### 🔹 3. Code-first migration-aware models: `StaticBase` and `StaticBaseModel`
 
 If model changes should be reflected in the database schema through migration generation, then your models must inherit from `StaticBase` or `StaticBaseModel`.
@@ -203,18 +204,14 @@ This is for code-first projects where:
 - during that rewrite it sets `target_metadata = StaticBase.metadata`
 - for that reason, migration generation follows `StaticBase`, not `HintBase`
 
-If you also want built-in CRUD-like helpers, inherit from `StaticBaseModel` instead of plain `StaticBase`.
-
 ### 🔹 Decision Summary
 
 | Need | Recommended choice |
 |------|--------------------|
 | Only raw SQL and connection handling | `SQLBaseManager` |
 | Existing database, no explicit classes needed | `SQLManager` + `db.Meta` |
-| Existing database, explicit model classes needed | `HintBase` |
-| Existing database, explicit classes + CRUD helpers needed | `HintBaseModel` |
-| Code-first schema design with migration support | `StaticBase` |
-| Code-first schema design + CRUD helpers | `StaticBaseModel` |
+| Existing database, explicit model classes needed | `HintBase` or `HintBaseModel` |
+| Code-first schema design with migration support | `StaticBase` or `StaticBaseModel` |
 
 ---
 
@@ -246,7 +243,7 @@ Basic flow with `SQLManager`:
 3. configure connection with `setup(...)`
 4. use `set_orm(...)` for explicit `HintBase` or `HintBaseModel` classes
 5. call `connect()`
-6. use raw SQL, `Meta`, or model classes depending on your approach
+6. use raw SQL, `Meta`, or explicit model classes depending on your approach
 
 ### 🔹 Minimal raw SQL example
 
@@ -320,49 +317,6 @@ It is the right choice when you do not need `Meta`, sessions, ORM registration, 
 - `set_query(...)`
 - `execute()`
 
-#### Example
-
-```python
-from SQLManager.manager import SQLBaseManager, SQLEngine
-
-db = SQLBaseManager()
-db.setup(
-    sql_engine=SQLEngine.POSTGRES,
-    ip="127.0.0.1",
-    port=5432,
-    db_name="sample_db",
-    user_name="postgres",
-    password="secret"
-)
-
-db.connect()
-db.set_query("SELECT * FROM users WHERE id = %s AND is_active = %s", 1, True)
-result = db.execute()
-
-for row in result:
-    print(row)
-
-db.disconnect()
-```
-
-#### Placeholder support
-
-`set_query(...)` accepts `%s` placeholders and converts them into SQLAlchemy named parameters automatically.
-
-```python
-db.set_query(
-    "SELECT * FROM users WHERE id = %s AND status = %s",
-    15,
-    "active"
-)
-```
-
-Conceptually this becomes:
-
-```sql
-SELECT * FROM users WHERE id = :param1 AND status = :param2
-```
-
 ### 🔹 `SQLManager`
 
 `SQLManager` extends `SQLBaseManager` and adds:
@@ -394,7 +348,7 @@ Before calling `connect()`, you must call:
 db.set_model_import("models")
 ```
 
-This is important for the current manager and migration workflow.
+This is required in the current manager flow.
 
 ### 🔹 `Meta`
 
@@ -409,27 +363,6 @@ db.Meta["users"]
 
 This is the most direct way to work in database-first mode without defining explicit model classes.
 
-#### Example: runtime reflection
-
-```python
-from SQLManager.manager import SQLManager, SQLEngine
-
-db = SQLManager()
-db.set_model_import("models")
-db.setup(
-    sql_engine=SQLEngine.POSTGRES,
-    ip="127.0.0.1",
-    port=5432,
-    db_name="sample_db",
-    user_name="postgres",
-    password="secret"
-)
-db.connect()
-
-UserTable = db.Meta.users
-users = db.Session.query(UserTable).all()
-```
-
 ### 🔹 `HintBase`
 
 `HintBase` is for explicit model classes in database-first workflows.
@@ -441,32 +374,6 @@ Use it when:
 - you want IDE autocomplete and visible properties
 - you do not want migrations to be generated from these models
 
-#### Example
-
-```python
-from sqlalchemy import Integer, String
-from sqlalchemy.orm import Mapped, mapped_column
-from SQLManager.manager import HintBase
-
-
-class User(HintBase):
-    __tablename__ = "users"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    name: Mapped[str] = mapped_column(String(100))
-```
-
-#### Why `HintBase` exists
-
-Sometimes runtime reflection is not enough.
-You may want:
-
-- IDE-visible model fields
-- explicit Python class names
-- direct model imports in your codebase
-
-That is exactly why `HintBase` exists.
-
 ### 🔹 `StaticBase`
 
 `StaticBase` is for code-first schema-driven development.
@@ -477,25 +384,7 @@ Use it when:
 - migration generation should follow model changes
 - database changes should be driven from code
 
-#### Example
-
-```python
-from sqlalchemy import Integer, String
-from sqlalchemy.orm import Mapped, mapped_column
-from SQLManager.manager import StaticBase
-
-
-class Product(StaticBase):
-    __tablename__ = "products"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    name: Mapped[str] = mapped_column(String(150))
-```
-
-#### Why `StaticBase` matters
-
 The migration service is intentionally built around `StaticBase.metadata`.
-That makes `StaticBase` the migration-aware base of the package.
 
 ---
 
@@ -513,26 +402,6 @@ You define your models in your own modules, then register them and inject them i
 - `register(cls)`
 - `get_model(cls | str)`
 - `load()`
-
-#### Typical use
-
-```python
-from SQLManager.service import ORMRegistrator
-
-registry = ORMRegistrator()
-registry.register(User)
-registry.register(Product)
-
-db.set_orm(registry)
-```
-
-This is especially useful for:
-
-- `HintBase` models
-- `HintBaseModel` models
-
-In the current implementation, the manager-side preparation flow is specifically used for `HintBase`-based models during `connect()`.
-For `StaticBase`-based code-first models, registry usage may still be part of your project organization, but it is not the manager-side preparation path described above.
 
 ### 🔹 `Migration`
 
@@ -552,32 +421,7 @@ It is mainly designed for models based on `StaticBase`.
 - upgrades the database
 - downgrades revisions
 - rebuilds migration history when needed
-
-#### The most important migration detail
-
-The migration service automatically rewrites Alembic `env.py` so that it uses:
-
-```python
-target_metadata = StaticBase.metadata
-```
-
-This is why migration support belongs to `StaticBase` and `StaticBaseModel`.
-It is also why `HintBase` is not the correct choice if you expect model changes to generate schema migrations.
-
-#### Example
-
-```python
-from SQLManager.service.Migration import Migration
-
-migration = Migration(
-    manager=db,
-    model_import="models",
-    auto_migrate=False
-)
-
-migration.make_migration("initial", autogenerate=False)
-migration.update_database()
-```
+- stamps head when needed
 
 #### Common migration methods
 
@@ -595,23 +439,52 @@ migration.stamp_head()
 
 ### 🔹 `BaseModel`
 
-`BaseModel` is the reusable CRUD-oriented model layer of the package.
+`BaseModel` is an abstract marker base.
 
-It is the part that gives model classes built-in helper methods, so you can write code such as:
+It does not provide built-in CRUD/query/session methods.
+Persistence operations are expected to be handled by repository classes (for example classes under `repository/`).
 
-- `User.all()`
-- `User.first()`
-- `User.get_by_id(...)`
-- `User.filter_by(...)`
-- `User.add(...)`
-- `User.commit()`
+### 🔹 `HintBaseModel`
 
-This can be seen as a DDD-leaning convenience layer.
-Instead of writing repeated session and CRUD boilerplate in separate places, the model can expose common persistence helpers through a shared base class.
+`HintBaseModel` combines:
 
-#### Main helper methods
+- `BaseModel`
+- `HintBase`
 
-- `use(db)`
+Use this when:
+
+- the database already exists
+- you want explicit model classes
+- you want IDE support
+- you do not want these models to drive migrations
+
+### 🔹 `StaticBaseModel`
+
+`StaticBaseModel` combines:
+
+- `BaseModel`
+- `StaticBase`
+
+Use this when:
+
+- your model should define the schema
+- model changes should be migration-aware
+
+---
+
+## 📦 Module: `repository`
+
+### 🔹 `BaseRepository`
+
+`BaseRepository` is a generic repository helper for session-based query and persistence operations.
+
+It is designed to work with:
+
+- `SQLManager` session
+- model classes derived from `BaseModel` (including `HintBaseModel` and `StaticBaseModel`)
+
+#### Main methods
+
 - `all()`
 - `first()`
 - `get_by_id(id_value)`
@@ -629,93 +502,31 @@ Instead of writing repeated session and CRUD boilerplate in separate places, the
 #### Example
 
 ```python
-User.use(db)
+from SQLManager.manager import SQLManager, SQLEngine
+from SQLManager.repository.BaseRepository import BaseRepository
+from models import User
 
-all_users = User.all()
-first_user = User.first()
-admin = User.get_by_id(1)
-active_users = User.filter_by(is_active=True)
+db = SQLManager()
+db.set_model_import("models")
+db.setup(
+    sql_engine=SQLEngine.POSTGRES,
+    ip="127.0.0.1",
+    port=5432,
+    db_name="sample_db",
+    user_name="postgres",
+    password="secret"
+)
+db.connect()
 
-new_user = User(name="Alice")
-User.add(new_user)
-User.commit()
+user_repo = BaseRepository(db=db, model=User)
+
+all_users = user_repo.all()
+first_user = user_repo.first()
+active_users = user_repo.filter_by(is_active=True)
+
+new_user = user_repo.add(User(name="Alice"))
+user_repo.commit()
 ```
-
-#### Important behavior
-
-- you must call `use(db)` before querying through the model helpers
-- write operations do not auto-commit
-- `commit()` and `rollback()` stay explicit
-
-### 🔹 `HintBaseModel`
-
-`HintBaseModel` combines:
-
-- `BaseModel`
-- `HintBase`
-
-Use this when:
-
-- the database already exists
-- you want explicit model classes
-- you want IDE support
-- you want built-in model helper methods
-- you do not want those models to drive migrations
-
-#### Example
-
-```python
-from sqlalchemy import Integer, String
-from sqlalchemy.orm import Mapped, mapped_column
-from SQLManager.model.BaseModel import HintBaseModel
-
-
-class User(HintBaseModel):
-    __tablename__ = "users"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    name: Mapped[str] = mapped_column(String(100))
-```
-
-This gives you explicit model usage such as:
-
-```python
-User.use(db)
-users = User.all()
-```
-
-### 🔹 `StaticBaseModel`
-
-`StaticBaseModel` combines:
-
-- `BaseModel`
-- `StaticBase`
-
-Use this when:
-
-- your model should define the schema
-- model changes should be migration-aware
-- you want built-in model helper methods
-
-#### Example
-
-```python
-from sqlalchemy import Integer, String
-from sqlalchemy.orm import Mapped, mapped_column
-from SQLManager.model.BaseModel import StaticBaseModel
-
-
-class Product(StaticBaseModel):
-    __tablename__ = "products"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    name: Mapped[str] = mapped_column(String(150))
-```
-
-This gives you both:
-
-- code-first schema ownership
-- model-level CRUD helpers
 
 ---
 
@@ -739,37 +550,27 @@ Use `SQLManager` + `db.Meta` when:
 
 ### 🔹 3. Existing database with explicit classes
 
-Use `HintBase` when:
+Use `HintBase` or `HintBaseModel` when:
 
 - the database already exists
 - you want explicit model classes
 - you want IDE-visible fields
-- you do not need `BaseModel` helpers
-
-### 🔹 4. Existing database with explicit classes and model helpers
-
-Use `HintBaseModel` when:
-
-- the database already exists
-- you want explicit classes
-- you want `Model.all()`-style usage
 - you do not want these models to drive migrations
 
-### 🔹 5. Code-first schema without `BaseModel`
+### 🔹 4. Code-first schema tracking
 
-Use `StaticBase` when:
-
-- your model classes define the schema
-- you want migration tracking
-- you do not need `BaseModel` helper methods
-
-### 🔹 6. Code-first schema with `BaseModel`
-
-Use `StaticBaseModel` when:
+Use `StaticBase` or `StaticBaseModel` when:
 
 - your model classes define the schema
 - you want migration tracking
-- you want `Model.all()`-style helpers
+
+### 🔹 5. Repository-based persistence flow
+
+Use `BaseRepository` when:
+
+- you want model logic and persistence logic to stay separate
+- you need generic CRUD/query helpers bound to a `SQLManager` session
+- you prefer repository pattern over model-bound persistence helpers
 
 ---
 
@@ -802,7 +603,7 @@ users = db.Session.query(UserTable).all()
 from sqlalchemy import Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
-from SQLManager.manager import SQLManager, SQLEngine, HintBase
+from SQLManager.manager import SQLManager, SQLEngine, HintBase 
 from SQLManager.service import ORMRegistrator
 
 
@@ -833,46 +634,7 @@ db.connect()
 users = db.Session.query(User).all()
 ```
 
-### 🔹 Example 3: Database-first explicit model with CRUD helpers through `HintBaseModel`
-
-```python
-from sqlalchemy import Integer, String
-from sqlalchemy.orm import Mapped, mapped_column
-
-from SQLManager.manager import SQLManager, SQLEngine
-from SQLManager.model.BaseModel import HintBaseModel
-from SQLManager.service import ORMRegistrator
-
-
-class User(HintBaseModel):
-    __tablename__ = "users"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    name: Mapped[str] = mapped_column(String(100))
-
-
-db = SQLManager()
-db.set_model_import("models")
-db.setup(
-    sql_engine=SQLEngine.POSTGRES,
-    ip="127.0.0.1",
-    port=5432,
-    db_name="sample_db",
-    user_name="postgres",
-    password="secret"
-)
-
-registry = ORMRegistrator()
-registry.register(User)
-db.set_orm(registry)
-
-db.connect()
-
-User.use(db)
-users = User.all()
-```
-
-### 🔹 Example 4: Code-first model with `StaticBase`
+### 🔹 Example 3: Code-first model with `StaticBase`
 
 ```python
 from sqlalchemy import Integer, String
@@ -907,22 +669,23 @@ migration.make_migration("initial", autogenerate=False)
 migration.update_database()
 ```
 
-### 🔹 Example 5: Code-first model with CRUD helpers through `StaticBaseModel`
+### 🔹 Example 4: Repository usage with explicit model class
 
 ```python
 from sqlalchemy import Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from SQLManager.manager import SQLManager, SQLEngine
-from SQLManager.model.BaseModel import StaticBaseModel
-from SQLManager.service.Migration import Migration
+from SQLManager.model.BaseModel import HintBaseModel
+from SQLManager.service import ORMRegistrator
+from SQLManager.repository.BaseRepository import BaseRepository
 
 
-class Product(StaticBaseModel):
-    __tablename__ = "products"
+class User(HintBaseModel):
+    __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    name: Mapped[str] = mapped_column(String(150))
+    name: Mapped[str] = mapped_column(String(100))
 
 
 db = SQLManager()
@@ -936,26 +699,29 @@ db.setup(
     password="secret"
 )
 
+registry = ORMRegistrator()
+registry.register(User)
+db.set_orm(registry)
 db.connect()
 
-migration = Migration(manager=db, model_import="models")
-migration.make_migration("initial", autogenerate=False)
-migration.update_database()
+user_repo = BaseRepository(db=db, model=User)
+users = user_repo.all()
 
-Product.use(db)
-Product.add(Product(name="Keyboard"))
-Product.commit()
+user_repo.add(User(name="Alice"))
+user_repo.commit()
 ```
 
 ---
 
 ## ⚠️ Notes
 
-- `SQLManager.connect()` currently expects `set_model_import(...)` to be called first.
-- `ORMRegistrator` exists so explicit ORM classes can be kept outside the manager and then injected into it.
+- `SQLManager.connect()` expects `set_model_import(...)` to be called first.
+- `ORMRegistrator` exists so explicit ORM classes can be kept outside the manager and injected when needed.
 - `HintBase` and `HintBaseModel` are for database-first explicit models, not migration metadata.
 - `StaticBase` and `StaticBaseModel` are the migration-aware bases of the package.
-- The migration service automatically rewrites Alembic `env.py` and sets `target_metadata = StaticBase.metadata`.
-- `BaseModel` is the shared helper layer that gives models class-level CRUD-oriented behavior.
-- `FileManager` is currently included in this repository as a local helper because it has not yet been published as a separate package.
-- The package does not try to replace SQLAlchemy; it tries to organize it into a reusable, practical module.
+- The migration service rewrites Alembic `env.py` and sets `target_metadata = StaticBase.metadata`.
+- `BaseModel` is an abstract marker, not a built-in CRUD layer in the current version.
+- `BaseRepository` is the current reusable query/persistence helper layer.
+- `file_manager/` is included as a local helper package for migration/file operations.
+- The package does not try to replace SQLAlchemy; it organizes it into a reusable and practical module.
+
