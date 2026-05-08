@@ -1,8 +1,9 @@
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.ext.declarative import DeferredReflection
 from sqlalchemy.orm import sessionmaker, declarative_base, Session
+
+from service import ORMRegistrator
 from .BaseManager import SQLBaseManager, SQLEngine
-from SQLManager.service.ORMRegistrator import ORMRegistrator
 
 StaticBase = declarative_base()
 HintBase = declarative_base(cls=DeferredReflection)
