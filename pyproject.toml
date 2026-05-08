@@ -3,7 +3,7 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "sqlmanager"
+name = "dardalyan-sqlmanager"
 version = "0.1.0"
 description = "Lightweight SQLAlchemy based database manager"
 readme = "README.md"
