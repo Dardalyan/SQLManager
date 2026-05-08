@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sqlmanager"
+version = "0.1.0"
+description = "Lightweight SQLAlchemy based database manager"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "SQLAlchemy>=2.0",
+    "alembic>=1.13"
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["manager*", "model*", "repository*", "service*", "file_manager*"]
